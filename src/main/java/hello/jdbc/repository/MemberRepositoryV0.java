@@ -64,6 +64,47 @@ public class MemberRepositoryV0 {
         }
     }
 
+    public void update(String memberId, int money) throws SQLException {
+        String sql = "update member set money=? where member_id = ?";
+
+        Connection connection = null;
+        PreparedStatement pstmt = null;
+        try {
+            connection = getConnection();
+            pstmt = connection.prepareStatement(sql);
+            pstmt.setString(2,memberId);
+            pstmt.setInt(1,money);
+            int row = pstmt.executeUpdate();
+            log.info("row={}",row);
+        } catch (SQLException e) {
+            log.error("db error",e);
+            throw e;
+        } finally {
+            close(connection,pstmt,null);
+        }
+    }
+
+    public void delete(String memberId) throws SQLException {
+
+        String sql = "delete from member where member_id = ?";
+
+        Connection connection = null;
+        PreparedStatement pstmt = null;
+        try {
+            connection = getConnection();
+            pstmt = connection.prepareStatement(sql);
+            pstmt.setString(1,memberId);
+            int row = pstmt.executeUpdate();
+            log.info("row={}",row);
+        } catch (SQLException e) {
+            log.error("db error",e);
+            throw e;
+        } finally {
+            close(connection,pstmt,null);
+        }
+    }
+
+
 
     // Statement : PreparedStatement는 이것을 상속 받음
     // -> PreparedStatement는 파라미터 바인딩하는 기능을 제공
