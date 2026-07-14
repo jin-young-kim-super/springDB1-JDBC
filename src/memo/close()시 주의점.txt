@@ -1,0 +1,17 @@
+   try {
+        .....
+    } catch (SQLException e) {
+        log.error("db error",e);
+        throw e;
+    } finally {
+        pstmt.close();
+        connection.close();
+    }
+
+finally 부분에서 pstmt.close()와 connection.close() 실행 시에도 Exception이 발생할 수 있다. 만약 pstmt.close()에서 Exception이 터지면 그 아래의 connection.close()가 실행이 안되서 
+connection이 제대로 반환이 되지 않고 낭비되게 된다. 고로 close()라는 메서드를 따로 빼서 다시 try-catch에 감싸서 Exception 발생이 돼도 문제가 없게 한다. 
+
+
+
+close(connection,pstmt,null)는 반드시 finally에서 해야 한다.
+왜냐하면 try 부분을 실행을 하다가 예외가 터지면 close가 실행이 되지 않아 Connection 부족 현상이 발생한다.
