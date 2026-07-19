@@ -1,0 +1,15 @@
+private  Connection getConnection() throws SQLException {
+    Connection connection = dataSource.getConnection();
+    log.info("get connection = {} class={}",connection,connection.getClass());
+    return connection;
+}
+-> dataSource.getConncetion은 DataSource 인터페이스가 제공하는 메서드이다.
+
+
+그러나 아래의 setJdbdUrl, setUsername, setPassword는 DataSource 인터페이스가 제공하는 것이 아니라 Hickari CP 구현체가 제공하는 메서드이다. 헷갈리지 말자.
+즉, DB 환경 설정에서는 DrivateMangerDataSource, HikariCpDataSource 등 서로 다르다는 것이다.
+HikariDataSource dataSource = new HikariDataSource();
+dataSource.setJdbcUrl(ConnectionConst.URL);
+dataSource.setUsername(ConnectionConst.USERNAME);
+dataSource.setPassword(ConnectionConst.PASSSWORD);
+-> MemberRepositoryV1Test 에서는 DataSource 인터페이스에 여러 가지 구현체를 넣어서 테스트를 하고 싶은 것이다. 고로, 테스트 코드에서는 현재 구현체를 선언해서 의존관계 주입을 하고 있는 것이다.
