@@ -1,0 +1,87 @@
+우리가 가장 흔한 패턴으로 [프레젠테이션 계층 -> 서비스 계층 -> 데이터 접근 계층]의 패턴을 가장 많이 사용한다. 
+그럼 그렇게 사용하는 가장 큰 이유는 뭘까? 그건 바로 서비스 계층의 코드를 최대한 특정 기술(UI 기술, JPA 등)에 전혀 의존하지 않고 순수 자바 코드로만 작성하기 위함이 가장 큰 목적이다. 
+
+프레젠테이션 계층은 UI와 관련된 기술이 웹, 서블릿, HTTP와 관련된 특정 기술을 가져간다. 
+데이터 접근 계층은 특정 데이터 접근 기술을 가져간다.
+이렇게 해서 서비스 계층에는 특정 기술의 코드가 없이, 순수 자바 코드로 유지할 수가 있는 것이다.  
+※그래서 특정 기술이 변경이 되도 서비스 계층은 변경에 의한 영향을 최소한으로 할 수가 있다. 
+
+
+순수 자바 코드 서비스 계층의 장점
+1. 비지니스 로직을 유지보수하기가 쉽다.
+-> 특정 기술 코드에 의존한 코드가 없고, 순수 자바 코드만 있으니 읽기도 쉽고 특정 기술 의식하지 않고 수정하기도 쉽다. 
+ 
+2. 테스트 코드 짜기가 쉽다. 
+-> Mock 코드다 짜기 쉽고, 유연한 테스트 코드도 짜기가 쉽다(만약 서비스 계층 의존관계에 특정 기술의 구현체가 있다면 Mock 코드도 못 짜고, 유연하게 의존관계를 변경도 못한다)
+
+아래 코드를 분석해 보자.
+트랜잭션은 서비스 계층에서 시작하는 것이 좋다. 그러나 그 결과 아래처럼
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.SQLException; 즉, JDBC라는 특정 데이터 베이이스 접근 기술에 의존을 하고 있다.
+만약 JDBC에서 JPA 기술로 변경 시, 서비스 계층도 거기에 맞춰서 수정을 해야 한다. 즉 핵심 비지니스 로직과 특정 기술이 섞여져 있기에 읽기도 어렵고 특정 기술에 의존적인 자바 코드가 있기에
+변경 시 유지/보수가 어렵다.
+위에서도 언급을 했지만, 서비스 계층은 순수한 자바 코드로 만들기 위하여 데이터 베이스 관련 코드는 데이터 접근 계층이 가져가야 한다고 말했는데 이 코드는 거기에 맞춰져 있지가 않다.
+그리고 참고로 SQLException등 데이터 관련 예외 또한 서비스 계층이 아니라 데이터 접근 계층에서 처리해줘야 한다.
+
+지금까지 우리가 개발한 코드의 문제점
+1. JDBC 코드 반복 문제
+
+2. 데이터 접근 예외의 누수 문제
+-> 데이터 접근 계층에 있어야 할 예외 코드(try-catch)가 서비스 계층에 있는 문제. 이상적으로는 데이터 관련 코드는 모두 데이터 접근 계층이 들고가야 한다.
+
+3. 트랜잭션 커넥션 동기화 문제/트랜잭션 적용 반복 문제
+->커넥션 동기화를 해결하기 위하여 커넥션을 파라미터로 넘겨 주었는데, 이를 위하여 update(), findById() 메서드를 커넥션을 파라미터로 받는 메서드와 받지 않는 메서드, 2개를 중복 구현해야 했다.
+-> 트랜잭션 적용 반복 문제 : try-catch,finally가 계속 반복이 된다.
+만약 트랜잭션 적용을 100번 해야 한다면 서비스 계층에 똑같은 코드가 100개 있어야 한다.
+
+스프링은 순수 자바 코드의 서비스 계층 제공과 위 언급한 문제들을 해결하는 방법을 제공한다. 향후 학습 주제이다.
+
+public class MemberServiceV2 {
+
+    private final MemberRepositoryV2 memberRepository;
+    private final DataSource dataSource;
+
+    public void accountTransfer(String fromId, String toId, int money) throws SQLException {
+
+        Connection connection = dataSource.getConnection();
+
+        try {
+            connection.setAutoCommit(false); // 트랜잭션 시작
+            bizLogic(fromId, toId, money, connection);
+            connection.commit(); // 트랜잭션 끝1
+        }catch (Exception e) {
+            connection.rollback(); // 트랜잭션 끝2
+            throw new IllegalStateException(e);
+        } finally {
+            if(connection != null) {
+                try {
+                    // 커넥션 풀을 사용하지 않는다면 setAutoCommit(true)를 안 해도 된다.
+                    // -> setAutoCommit(true)을 하지 않고 커넥션 풀에 반납을 하면 setAutoCommit(false)가 유지가 되 버린다.
+                    // 그러나 커넥션 풀을 사용하지 않고 매회 커넥션 신규 생성 시 setAutoCommit은 false로 자동 세팅되게 DB에 설정이 되 있끼에
+                    // 별 문제가 안된다.
+                    connection.setAutoCommit(true);
+                    connection.close();
+                } catch (Exception e) {
+                    log.error("error",e);
+                    throw new IllegalStateException(e);
+                }
+            }
+        }
+    }
+
+    private void bizLogic(String fromId, String toId, int money, Connection connection) throws SQLException {
+        // 비니지스 로직 시작
+        Member fromMember = memberRepository.findById(connection, fromId);
+        Member toMember = memberRepository.findById(connection, toId);
+        memberRepository.update(connection, fromId, fromMember.getMoney() - money);
+        validate(toMember);
+        memberRepository.update(connection, toId, toMember.getMoney() + money);
+    }
+
+    private static void validate(Member toMember) {
+        if(toMember.getMemberId().equals("ex")) {
+            throw new IllegalStateException("이체 중 예외 발생");
+        }
+    }
+}
