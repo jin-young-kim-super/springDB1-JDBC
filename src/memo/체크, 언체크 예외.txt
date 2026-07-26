@@ -1,0 +1,48 @@
+Checked Exception
+-> 컴파일러가 반드시 처리하도록 강제하는 예외
+
+Unchecked Exception
+-> 컴파일러가 처리 여부를 강제하지 않는 예외
+※ 일단, 강의자료에서 자바의 예외 객체 계층에 대해서 훍어 보자. 
+
+체크라는 개념
+-> 자바에서 체크라는 것 딱 2가지 방법으로만 실행되나. 
+1. try-catch로 직접 처리
+
+2. throws로 호출한 쪽에 예외를 던지기
+
+ex)
+
+public void readFile() throws IOException {
+	// 로직 중 체크 예외가 필요한 로직이 있음
+}
+
+이 메서드를 호출해 보자.
+public void test() {
+    readFile();   // 컴파일 오류
+}
+-> IOException은 체크 예외이기 때문에, 아래처럼 try-catch로 잡거나 thorws를 해줘야 한다. 
+ex)
+1. try-catch
+public void test() {
+ try{ 
+   readFile();
+ } catch(IOExcpetion e) {
+ 
+ }
+}
+
+2. thorws로 호출한 쪽에 던지기
+public void test() throws IOException {
+   readFile();
+}
+
+언체크 예외는 절대 try-catch 통해서 잡으려고 하면 안 된다.
+-> 언체크 예외에는 OutOfMemoryError이나 심각한 시스템 오류와 같은 런타임 예외는 개발자가 그 예외를 잡은 들, 할 수 있는 게 없다. 
+그래서 컴파일러도 예외 처리를 체크하지 않는다. 
+
+반대로 체크 예외는 컴파일러 입장에서는 예외를 잡아서 어떠한 종류의 처리를 하길 원해서 예외를 처리했는 지 체크를 한다.
+
+
+
+
