@@ -1,0 +1,17 @@
+스프링을 빌드하면, 우리는 DataSource와 TransactionManger를 등록하지 않았는데도 트랜잭션 기능이 잘 돌아 간다. 
+그 이유는 스프링 부트가 기본적인 DataSource와 TransactionManager를 자동 등록하기 때문이다. 
+1. DataSource -> Hikari Cp
+2. TransactionManager -> 외부 라이브러리를 통해 만약 JpaTransactionManager 이 있으면 그것을 트랜잭션 매니저로 등록을 하고, DataSourceTransactionManager(JDBC 트랜잭션 매니저 구현체)가 있ㄴ으면
+그것을 자동 등록한다. 이떄 PlatformTransactionManager 인터페이스에 주입을 한다.(여기에 매개 변수로 DataSource 구현체를 집어 넣는다)
+
+그러나 MemberRepositoryV3_3 처럼 개발자가 @Confiuration, @Bean을 통해 수동 설정을 하는 경우, 수동 설정이 우선 순위를 가지므로, 스프링 부트는 자동 등록을 하지 않는다. 
+
+ex) DataSource 등록 시 필요한 DB 정보는 아래와 같이 보통 등록을 한다
+application.properties
+spring.datasource.url=jdbc:h2:tcp://localhost/~/test
+spring.datasource.username=sa
+spring.datasource.password=
+-> spring.datasource.url이 설정이 돼 있지 않는 경우, 스프링 부트는 내장 데이터베이스(메모리 DB)를 생성하려고 한다
+
+즉, 스프링 부트는 DataSource와 TransactionManager를 수동 설정하는 부분이 없으면
+application.properties를 참고하여 DataSource와 TransactionManager를 자동 등록한다.
