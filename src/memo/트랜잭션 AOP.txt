@@ -1,0 +1,40 @@
+//트랜잭션 시작
+TransactionStatus status = transactionManager.getTransaction(new
+DefaultTransactionDefinition());
+try {
+ //비즈니스 로직
+ bizLogic(fromId, toId, money);
+ transactionManager.commit(status); //성공시 커밋
+} catch (Exception e) {
+ transactionManager.rollback(status); //실패시 롤백
+ throw new IllegalStateException(e);
+}
+
+위 코드를 보면 알겠지만, 우리가 지난 지간의 트랜잭션 템플릿 덕분에 트랜잭션을 처리하는 반복 코드(setAutoCommit false, commit, rollbak, setAutoCommit true) 문제를 처리할 수가 있었다.
+그러나 아직 서비시 계층에 순수한 자바 코드만을 넘긴다는 목적은 달성하지 못했다. 
+이럴 때 스프링 AOP를 통해 프록시를 도입하면 문제를 깔끔하게 해결할 수가 있따. 
+(고급편에서 AOP에 더 자세히 다루니깐, 지금은 구체적인 내용은 이해 못해도 ㄱㅊ)
+
+프록시를 사용하면 트랜잭션 부분의 객체(프록시 객체)와 서비스 객체를 명확히 분리가 가능하다
+(강의 자료의 그림을 참조)
+
+
+
+트랜잭션 프록시 코드 예시
+public class TransactionProxy {
+
+ private MemberService target;
+
+ public void logic() {
+
+     TransactionStatus status = transactionManager.getTransaction(..);
+     try {
+
+         target.logic(); //실제 대상 호출 : 프록시 객체에 MemberService을 의존시키는 것이 포인트!!!!
+         transactionManager.commit(status);
+     } catch (Exception e) {
+         transactionManager.rollback(status);
+         throw new IllegalStateException(e);
+     }
+     }
+}
