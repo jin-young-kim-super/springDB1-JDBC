@@ -1,0 +1,23 @@
+예외를 전환할 떄는 반드시, 그 이전의 예외를 포함시켜야 한다. 안 그러면 심각한 문제가 발생한다.   
+그 이유는 바로 그렇게 하면 그 이전의 예외에 대한 스택 트레이스를 로그로 보고 싶을 때 그 로그가 출력이 안 되기 때문이다. 
+
+  static class RuntimeSQLException extends RuntimeException {
+        public RuntimeSQLException(Throwable cause) { 
+            super(cause);
+        }
+    }
+
+    static class Repository {
+        public void call()  {
+            try {
+                runSQL();
+            }catch (SQLException e) {
+                throw new RuntimeSQLException(e); // 예외 전환 : SQLException(체크 예외) -> RuntimSQLException(언체크 예외) 
+            }				  // -> SQLExcpetion 예외를 RuntimeSQLException에서 예외 포함을 해주고 있끼 때문에, 나중에 log.info()를 했을 때 그 이전 예외까지 포함한
+					 // 모든 예외에 대한 스택 트레이스를 볼 수가 있다.
+        }
+
+        public void runSQL() throws SQLException {
+            throw new SQLException("ex");
+        }
+}
