@@ -1,0 +1,22 @@
+우리는 이제 서비스 클래스에 구현체가 아닌 인터페이스를 통해 의존을 하는 코드를 만들어 볼 것이다.
+Q. 왜 처음부터 서비스 클래스에 인터페이스를 만들지 않았을까?
+A. 인터페이스에 특정 기술에 의존된 체크 예외(SQLException 등은 JDBC 기술의 예외)를 던져야 했기 때문에, 만약 구현 기술이 변경되면 인터페이스를 수정해야 한다.
+그럼 클라이언트 코드에 변경이 일어날 수 있기에 OCP 위반이 된다. 인터페이스를 만드는 목적은 클라이언트의 코드 변경 없이 구현체를 변경/확장하기 위함이다.
+
+ex)
+public interface MemberRepositoryEx {
+ Member save(Member member) 【throws SQLException】;
+ Member findById(String memberId) 【throws SQLException】;
+ void update(String memberId, int money) 【throws SQLException】;
+ void delete(String memberId) 【throws SQLException】;
+}
+
+인터페이스를 의존하는 서비스 클래스에서도 잡거나 던져야 한다.
+@Slf4j
+public class MemberRepositoryV3 implements MemberRepositoryEx {
+	public Member save(Member member) 【throws SQLException】 {
+      		String sql = "insert into member(member_id, money) values(?, ?)";
+ 	}
+}
+
+그래서 체크 예외는 런타임 예외로 전환을 한 상태에서 인터페이스에 의존시켜야 한다
