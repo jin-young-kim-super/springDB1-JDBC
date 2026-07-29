@@ -2,10 +2,7 @@ package hello.jdbc.service;
 
 import hello.jdbc.connection.ConnectionConst;
 import hello.jdbc.domain.Member;
-import hello.jdbc.repository.MemberRepository;
-import hello.jdbc.repository.MemberRepositoryV3;
-import hello.jdbc.repository.MemberRepositoryV4_1;
-import hello.jdbc.repository.MemberRepositoryV4_2;
+import hello.jdbc.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -55,13 +52,14 @@ class MemberServiceV4Test {
         }
 
         @Bean
-        MemberRepository memberRepositoryV4_2() {
-            return new MemberRepositoryV4_2(dataSource);
+        MemberRepository memberRepositoryV5() {
+
+            return new MemberRepositoryV5(dataSource);
         }
 
         @Bean // 트랜잭션 트록시 객체에서 bizLogic 호출
         MemberServiceV4 memberServiceV4() {
-            return new MemberServiceV4(memberRepositoryV4_2());
+            return new MemberServiceV4(memberRepositoryV5());
         }
     }
 
