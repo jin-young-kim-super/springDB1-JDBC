@@ -1,0 +1,41 @@
+강의 자료에서 먼저 스프링 예외의 계층구조를 확인하자!!!
+
+지난 시간에도 언급을 하였지만, 데이터베이스마다 에러코드가 다르고, 복구 대상의 예외에 대해서 일일이 예외를 직접 만들어야 하는 문제가 있었다. 
+스프링은 이를 해결하기 위하여 대부분의 데이터 베이스 벤더의 예외 코드, 예외 객체에 대해 스프링이 만든 예외를 상속시킴으로써 모든 데이터베이스의 에러코드/예외 객체에 대해 단 하나로
+추상화를 해놓았다. 그래서 개발자는 OCP를 지킬 수 있다, 즉 데이터베이스 내부를 몰라도 그리고 데이터베이스가 변경이 되도 클라이언트 코드 변경이 없다. 
+참고로, 스프링 예외 계층의 최상위는 DataAccessException이다. 그리고 이 DataAccessException은 자바 예외인 RuntimeException을 상속받고 있기에, 스프링 예외의 대부분은 언체크(런타임)예외이다.
+
+
+DataAccessException은 크게 Transient예외와 NonTransient예외로 나뉜다. (Transient : 일시적인)
+Transient 예외 : 같은 SQL를 잡아서 다시 실행하면 성공할 가능성이 있는 예외(꼭 성공하는 것 x)
+-> ex) DB 타임아웃, 락 대기 시간 만료 등은 DB가 상태가 좋아지거나 락이 풀렸을 떄 똑같은 SQL을 재시도하면 성공한다.
+
+
+NonTransient 예외 : 같은 SQL을 잡아서 다시 실행해도 성공x
+-> ex) SQL 문법 에러, DB 제약조건 위배 등은 DB 상태의 관계없이 아무리 똑같은 SQL문을 다시 실행해도 성공하지 않는다.
+
+
+
+아래의 코드를 보자!! 42122는 h2 데이터 베이스의 에러코드이다.
+만약 이걸 레포지토리에서 구현을 한다고 하면, catch 부분에서 h2 에러코드를 넣고, 또 만약 해당 에러 코드에 해당하지 않는 예외이면
+throw new BadGramerException(e)를 개발자가 직접 던져 줘야 한다. 문제점은 에러 코드는 DB마다 다르기에 DB 변경 시 다시 에러 코드를 고쳐야 하며
+또 일일이 개발자가 서비스 클래서에서 잡아서 복구를 시도하려던 예외가 아닌 경우를 대비해서 서비스 클래스에서 예외를 던져 줘야 하고, 또 42122가 SQL문법 오류 코드인데 여기에 해당하는 스프링 추상화 예외가 뭔지 일일이 찾아서 BadGrammerException을
+던져줘야 한다.
+스프링은 이러한 문제점을 해결해준다. 즉, 자동으로 스프링 추상화 예외를 던져준다.
+※이 코드의 장점 중 하나로, 언체크 예외를 개발자가 일일이 만들어 주지 않고, 스프링이 대신 만든 언체크 예외를 사용할 수 있다는 장점이 여기에 있음에 주의!!
+
+@Test
+void sqlExceptionErrorCode() {
+    String sql = "select bad grammer"; // SQL 문법 오류
+
+    try {
+        Connection connection = dataSource.getConnection();
+        PreparedStatement psmt = connection.prepareStatement(sql);
+        psmt.executeQuery();
+    } catch (SQLException e) {
+        // h2의 에러코드
+        assertThat(e.getErrorCode()).isEqualTo(42122);
+        throw new BadGrammerException(e); // 스프링 예외 : 체크 예외를 언체크 예외로 전환해서 던져야 한다.
+        log.info("error",e);
+    }
+}
